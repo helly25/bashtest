@@ -24,9 +24,7 @@ set -euo pipefail
 PACKAGE_NAME="bashtest"
 BAZELMOD_NAME="helly25_bashtest"
 WORKSPACE_NAME="com_helly25_bashtest"
-PATCHES=(
-    ".github/workflows/bazelmod.patch"
-)
+PATCHES=()
 
 # Automatic vars from workflow integration.
 TAG="${GITHUB_REF_NAME}"
