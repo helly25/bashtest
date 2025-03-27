@@ -78,7 +78,7 @@ Example:
 set -euo pipefail
 
 # shellcheck disable=SC1090,SC1091,SC2154 # Source via magic bahtest variable
-source "${helly25_bashtest_bashtest_sh}"
+source "${helly25_bashtest}"
 
 function test::hello() {
     expect_ne "Hello" "World"

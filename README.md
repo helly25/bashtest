@@ -34,7 +34,7 @@ The flags can be used on the `bazel run` and `bazel test` commands (the latter r
 set -euo pipefail
 
 # shellcheck disable=SC1090,SC1091,SC2154
-source "${helly25_bashtest_bashtest_sh}"
+source "${helly25_bashtest}"
 
 test::my_test() {
   expect_ne "Hello" "World"

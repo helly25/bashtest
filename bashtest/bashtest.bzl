@@ -25,7 +25,7 @@ def bashtest(
     """Bashtest wrapper.
 
     Specialized `sh_shell` rule to simplify `bashtest` usage. The rule provides
-    the `helly25_bashtest_bashtest_sh` environement variable that should
+    the `helly25_bashtest` environement variable that should
     be used in test scripts to source the `bashtest.sh` script as follows:
 
     * File: sh_test.sh
@@ -34,7 +34,7 @@ def bashtest(
     set -euo pipefail
 
     # shellcheck disable=SC1090,SC1091,SC2154
-    source "${helly25_bashtest_bashtest_sh}"
+    source "${helly25_bashtest}"
 
     test::my_test() {
       expect_ne "Hello" "World"
@@ -60,7 +60,7 @@ def bashtest(
     Args:
         name:      Name of the test rule. Should end in `_test`
         deps:      Dependencies which will have bashtest_sh automatically added.
-        env:       Environmentname that automatically adds `helly25_bashtest_bashtest_sh`.
+        env:       Environmentname that automatically adds `helly25_bashtest`.
         **kwargs:  All other attributes are passed through as is.
     """
 
@@ -68,7 +68,7 @@ def bashtest(
     # However, its workspace name is 'com_helly25_bashtest' and in Bazelmod mode we
     # use that as the repo_name, so it works in both cases.
     extra_env = {
-        "helly25_bashtest_bashtest_sh": (
+        "helly25_bashtest": (
             "$(rootpath @com_helly25_bashtest//bashtest:bashtest_sh)"
         ),
     }

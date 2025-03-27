@@ -20,7 +20,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC1090,SC1091,SC2154
-source "${helly25_bashtest_bashtest_sh}"
+source "${helly25_bashtest}"
 
 
 bad_bashtest() {
