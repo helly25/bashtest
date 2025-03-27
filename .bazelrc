@@ -1,0 +1,22 @@
+# To debug bazel options, uncomment next line.
+# common --announce_rc
+
+try-import %workspace%/.bazelrc.user
+
+common --consistent_labels
+common --enable_bzlmod
+common --noincompatible_enable_cc_toolchain_resolution
+common --incompatible_disallow_empty_glob
+common --nolegacy_external_runfiles
+common --features=layering_check
+
+# Define the Apple OS
+common --apple_platform_type=macos
+
+# Allow platform specific control and add the missing 'CoreFoundation' lib.
+common --enable_platform_specific_config
+common:macos --features=-supports_dynamic_linker --linkopt=-framework --linkopt=CoreFoundation --host_linkopt=-framework --host_linkopt=CoreFoundation
+
+test --test_output=errors
+
+common --copt=-fdiagnostics-color=always

@@ -1,0 +1,45 @@
+name: Test
+on: [push]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - uses: pre-commit/action@v3.0.1
+      - uses: pre-commit-ci/lite-action@v1.0.2
+        if: always()
+
+  test:
+    needs: pre-commit
+    strategy:
+      matrix:
+        # If `Windows` support is removed - state so inthe README.md
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        bazel_mode: [bzlmod, workspace, both]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: bazel-contrib/setup-bazel@0.14.0
+      with:
+        bazelisk-cache: true
+        # Store build cache per workflow.
+        disk-cache: ${{ github.workflow }}
+        # Share repository cache between workflows.
+        repository-cache: true
+    - name: Built & Test
+      env:
+        BZLMOD: ${{ matrix.bazel_mode != 'workspace' && '--enable_bzlmod' || '--noenable_bzlmod' }}
+        WORKSPACE: ${{ matrix.bazel_mode != 'bzlmod' && '--enable_workspace' || '--noenable_workspace' }}
+      run: |
+        bazel test ${{env.BZLMOD}} ${{env.WORKSPACE}} //...
+
+  done:
+    needs: [pre-commit, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Done
+        run: echo "Done"
