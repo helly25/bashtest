@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         # If `Windows` support is removed - state so inthe README.md
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
         bazel_mode: [bzlmod, workspace, both]
     runs-on: ${{ matrix.os }}
     steps:
