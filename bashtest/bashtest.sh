@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# shellcheck disable=SC2148 # This is not executable
 # SPDX-FileCopyrightText: Copyright (c) The helly25 authors (helly25.com)
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -15,62 +14,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# BashTest: see `bashtest.sh -h`
+# BashTest: see `bazel run //bashtest:bashtest_help`
 
 set -euo pipefail
 
 function die() { echo >&2 "ERROR: ${*}"; exit 1; }
 
 _BASHTEST_USAGE=$(cat <<'EOF'
-bashtest.sh - A Bazel shell test runner.
+# bashtest.sh - A Bazel shell test runner.
 
-- All declared functions that start with "test::" are considered as tests.
-- Each test should `return 0` to indicate success or `return 1` for failure.
-- Call `test_runner` at the end of the test program.
-- Provides '${BASHTEST_TMPDIR}' which is a test scratch directory.
-- Tests can be filtered (skipping non matching) using flag '--test_filter <pattern>'.
-- Tests that use diff functionality 'expect_files_eq' can use '-u="${PWD}"' to
+* All declared functions that start with "test::" are considered as tests.
+* Each test should use `return 0` to indicate success or `return 1` for failure.
+* Call `test_runner` at the end of the test program.
+* Provides '${BASHTEST_TMPDIR}' which is a test scratch directory.
+* Tests can be filtered (skipping non matching) using flag '--test_filter `<pattern>`'.
+* Tests that use diff functionality 'expect_files_eq' can use '-u="${PWD}"' to
   update their golden files.
 
-Usage:
-  bazel test <test_target> [ --test_arg=-f=<pattern> ] [ -v ] [ -u="${PWD}" ]
-  bazel run <test_target -- [ -f=<pattern> ] [ -v ][ -u="${PWD}" ]
+## Usage:
 
--f --test-filter <pattern>  A glob pattern for tests to run (skip others). The
-                            test is considered failing of no test was run.
--u --update <workspace>     Update golden files, assuming the <workspace>.
--v --verbose                Show additional output while tests succeed or fail.
-                            Prints all test calls and file diffs.
+* bazel test `<test_target>` [ --test_arg=-f=`<pattern>` ] [ -v ] [ -u="${PWD}" ]
+* bazel run `<test_target>` -- [ -f=`<pattern>` ] [ -v ][ -u="${PWD}" ]
 
-Assertions:
-  expect_eq "${LHS}" "${RHS}"
+## Flags:
+
+* -f --test-filter `<pattern>`  A glob pattern for tests to run (skip others). The
+                                test is considered failing of no test was run.
+* -u --update `<workspace>`     Update golden files, assuming the `<workspace>`.
+* -v --verbose                  Show additional output while tests succeed or fail.
+                                Prints all test calls and file diffs.
+
+## Assertions:
+
+* expect_eq "${LHS}" "${RHS}"
                             Asserts that two strings are the same.
 
-  expect_ne "${LHS}" "${RHS}"
+* expect_ne "${LHS}" "${RHS}"
                             Asserts that two strings are different.
 
-  expect_files_eq "${LHS}" "${RHS}"
+* expect_files_eq "${LHS}" "${RHS}"
                             Asserts that two file are the same (supports golden
                             updates).
 
-  expect_contains "${EXPECTED}" "${ARRAY[@]}"
+* expect_contains "${EXPECTED}" "${ARRAY[@]}"
                             Assert that one string is present in an array.
 
-  expect_not_contains "${EXPECTED}" "${ARRAY[@]}"
+* expect_not_contains "${EXPECTED}" "${ARRAY[@]}"
                             Assert that one string is NOT present in an array.
 
 
-Status:
-  test_has_error            Returns whether a test function has had an error.
-  test_has_failed_tests     Returns whether a test program had previous
+## Status:
+
+* test_has_error            Returns whether a test function has had an error.
+* test_has_failed_tests     Returns whether a test program had previous
                             failing test functions.
 
-Setup/Shutdown:
-  test::test_init           If present, then this function runs first!
-                            Test will only be executed if it succeeds.
-  test::test_done           If present, then this function runs last!
+## Setup/Shutdown:
 
-Example:
+* test::test_init           If present, then this function runs first!
+                            Test will only be executed if it succeeds.
+* test::test_done           If present, then this function runs last!
+
+## Example:
 
 ```sh
 # shellcheck disable=SC2317 # Functions are called bashtest
@@ -125,7 +130,7 @@ while getopts -- '-:f:hu:v' OPTION; do
     fi
     case "${OPTION}" in
         f|test[-_]filter) _BASHTEST_FILTER="${OPTARG}" ;;
-        h|help) echo "${_BASHTEST_USAGE}"; return 2 ;;
+        h|help) echo "${_BASHTEST_USAGE}"; exit 2 ;;
         u|update[-_]golden) _BASHTEST_UPDATE_GOLDEN="${OPTARG}" ;;
         v|verbose) _BASHTEST_VERBOSE=1 ;;
         *) die "Unknown flag '${OPTERR}'." ;;
