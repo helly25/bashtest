@@ -6,11 +6,11 @@ The library is tested with continuous integration: [![Test](https://github.com/h
 
 ## Bashtest
 
-Run the following command to get detailed information on the actual bashtest.sh script:
+Run one of the following commands to get detailed information on the actual bashtest.sh script:
 
-```sh
-(. testing/bashtest.sh --help)`
-```
+* `bazel run //bashtest:bashtest_help`
+* `bazel run //bashtest:bashtest_help | pandoc -s -t man | man -l -`
+* `bazel run //bashtest:bashtest_help | pandoc | lynx -stdin`
 
 The flags can be used on the `bazel run` and `bazel test` commands (the latter requiring `--test_arg=...`).
 

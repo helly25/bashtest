@@ -33,3 +33,27 @@ alias(
     actual = ":bashtest_sh",
     visibility = ["//visibility:public"],
 )
+
+genrule(
+    name = "bashtest_help",
+    testonly = 1,
+    srcs = ["bashtest.sh"],
+    outs = ["bashtest_help.sh"],
+    cmd = """
+    echo "#!/usr/bin/env bash" >$@
+    echo "bash $< --help || true" >>$@
+    """,
+    executable = 1,
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "bashtest_help_md",
+    testonly = 1,
+    srcs = ["bashtest.sh"],
+    outs = ["bashtest_help.md"],
+    cmd = """bash $< --help >$@ || true""",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
