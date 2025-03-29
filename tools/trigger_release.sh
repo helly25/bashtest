@@ -54,8 +54,9 @@ fi
 
 grep "${VERSION}" < <(git tag -l) && die "Version tag is already in use."
 
-# Should the tag have the changelog parts?
-git tag -s -a "${VERSION}" -m "New release tag version: '${VERSION}'."
+git tag -s -a "${VERSION}" \
+    -m "New release tag version: '${VERSION}'." \
+    -m "$(awk '/^#/{if(NR>1)exit}/^[^#]/{print}' <CHANGELOG.md)"
 git push origin --tags
 
 echo "Next version: ${NEXT_VERSION}"
@@ -97,7 +98,7 @@ if which gh; then
         else
             gh pr merge "${NEXT_BRANCH}" --auto -d -s -b "${MERGE_BODY}" -t "${MERGE_SUBJECT}"
             git checkout main
-            git branch -d "${NEXT_BRANCH}"
+            git branch -d "${NEXT_BRANCH}" || true
             echo "PR ${PRNUM} cannot be merged via admin override."
             echo "Please approve it at ${PRURL}."
         fi
