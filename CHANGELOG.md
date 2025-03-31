@@ -1,4 +1,4 @@
-# 0.1.1
+# 0.2.0
 
 * Added convenient target to print `bashtest` help `bazel run //bashtest:bashtest_help` which can be used with `|pandoc -s -t man|man -l -`.
 * Fixed description for flag '--test_filter'.

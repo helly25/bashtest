@@ -58,8 +58,11 @@ Note: If long test flags are denoted with '-'s, then '_' can also be used, e.g.
                             Asserts that two strings are different.
 
 * expect_files_eq "${LHS}" "${RHS}"
-                            Asserts that two file are the same (supports golden
-                            updates).
+                            Asserts that two file are the same.
+                            If the test fails it will explain how to update the
+                            golden file. That is the test needs to be run with
+                            certain precaution and additional flags, so that it
+                            can update the golden file.
 
 * expect_contains "${EXPECTED}" "${ARRAY[@]}"
                             Assert that one string is present in an array.
@@ -321,7 +324,9 @@ function test_runner() {
 # expect_files_eq <golden_file> <result_file>
 # ```
 #
-# If the test fails it will explain how to update the golden file.
+# If the test fails it will explain how to update the golden file. That is the
+# test needs to be run with certain precaution and additional flags, so that it
+# can update the golden file.
 
 expect_files_eq() {
     FILE_GOLDEN="${1}"
