@@ -1,4 +1,4 @@
-# shellcheck disable=SC2148 # This is not executable
+# shellcheck shell=bash
 # SPDX-FileCopyrightText: Copyright (c) The helly25 authors (helly25.com)
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -38,11 +38,16 @@ _BASHTEST_USAGE=$(cat <<'EOF'
 
 ## Flags:
 
-* -f --test-filter `<pattern>`  A glob pattern for tests to run (skip others). The
-                                test is considered failing of no test was run.
+* -f --test-filter `<pattern>`  A posix regular expression for tests to run,
+                                while skipping other tests. The test as a whole
+                                is considered failing if no test was run.
+* --gtest-filter                Like '-f' but uses glob patterns.
 * -u --update `<workspace>`     Update golden files, assuming the `<workspace>`.
 * -v --verbose                  Show additional output while tests succeed or fail.
                                 Prints all test calls and file diffs.
+
+Note: If long test flags are denoted with '-'s, then '_' can also be used, e.g.
+'--test_filter' and '--test-filter' are both long forms for '-f'.
 
 ## Assertions:
 
@@ -105,7 +110,8 @@ bashtest(
 EOF
 )
 
-_BASHTEST_FILTER=""
+_BASHTEST_FILTER_REGX=""
+_BASHTEST_FILTER_GLOB=""
 _BASHTEST_UPDATE_GOLDEN=""
 _BASHTEST_VERBOSE=
 
@@ -113,13 +119,44 @@ _BASHTEST_VERBOSE=
 # Flag parsing:
 # - short flags with values support optional value separation with '=' or ' '.
 # - long form flags must have at least two characters in order to distinguish.
+# - we look for '=' and ' ' in long flags
+#   - '=' works automatically
+#   = ' ' requires the long flag to be set in $LONG_OPTIONS_WITH_ARGS
 
+LONG_OPTIONS_WITH_ARGS=(
+    "test[-_]filter"
+    "gtest[-_]filter"
+    "update[-_]golden"
+)
 while getopts -- '-:f:hu:v' OPTION; do
     if [ "${OPTION}" = "-" ]; then
-        OPTION="${OPTARG%%[= ]*}"
-        OPTARG="${OPTARG#"${OPTION}"}"
-        OPTARG="${OPTARG#[= ]}"
-        OPTERR="--${OPTION}"
+        OPTION=  # Triggers fallback if necessary
+        for LONGOPT in "${LONG_OPTIONS_WITH_ARGS[@]}"; do
+            # shellcheck disable=SC2053 # We want glob matching here.
+            if [[ ${OPTARG} == ${LONGOPT}=* ]]; then
+                OPTION="${OPTARG%%=*}"
+                OPTARG="${OPTARG#"${OPTION}"}"
+                OPTARG="${OPTARG#=}"
+                OPTERR="--${OPTION}"
+                break
+            elif [[ "${OPTARG}" == ${LONGOPT} ]]; then
+                OPTION="${OPTARG}"
+                OPTERR="--${OPTION}"
+                if [[ "${#}" -lt "${OPTIND}" ]]; then
+                    die "Flag '${OPTERR}' has no argument."
+                fi
+                _ALLARGS=("${@}")
+                OPTARG="${_ALLARGS[$((OPTIND - 1))]}"
+                ((OPTIND+=1))
+                break
+            fi
+        done
+        if [[ -z "${OPTION}" ]]; then
+            OPTION="${OPTARG%%=*}"
+            OPTARG="${OPTARG#"${OPTION}"}"
+            OPTARG="${OPTARG#=}"
+            OPTERR="--${OPTION}"
+        fi
         if [[ "${#OPTION}" -le 1 ]]; then
             die "Long options have at least two characters. Did you mean '-${OPTION}'?"
         fi
@@ -129,7 +166,8 @@ while getopts -- '-:f:hu:v' OPTION; do
         OPTERR="-${OPTION}"
     fi
     case "${OPTION}" in
-        f|test[-_]filter) _BASHTEST_FILTER="${OPTARG}" ;;
+        f|test[-_]filter) _BASHTEST_FILTER_REGX="${OPTARG}" ;;
+        gtest[-_]filter) _BASHTEST_FILTER_GLOB="${OPTARG}" ;;
         h|help) echo "${_BASHTEST_USAGE}"; exit 2 ;;
         u|update[-_]golden) _BASHTEST_UPDATE_GOLDEN="${OPTARG}" ;;
         v|verbose) _BASHTEST_VERBOSE=1 ;;
@@ -166,10 +204,20 @@ declare -r BASHTEST_TMPDIR
 function _bashtest_handler() {
     FUNC_NAME="${1}"
     TEST_NAME="${2}"
-    if [[ -n "${_BASHTEST_FILTER}" ]] && ! [[ ${TEST_NAME} =~ ${_BASHTEST_FILTER} ]]; then
-        echo "[  SKIP  ] ${TEST_NAME}"
-        ((_BASHTEST_NUM_SKIP+=1))
-        return
+    if [[ -n "${_BASHTEST_FILTER_GLOB}${_BASHTEST_FILTER_REGX}" ]]; then
+        PASS_GLOB=
+        PASS_REGX=
+        # shellcheck disable=SC2053 # We want glob matching here.
+        if [[ -n "${_BASHTEST_FILTER_GLOB}" ]] && [[ ${TEST_NAME} == ${_BASHTEST_FILTER_GLOB} ]]; then
+            PASS_GLOB=1
+        elif [[ -n "${_BASHTEST_FILTER_REGX}" ]] && [[ ${TEST_NAME} =~ ${_BASHTEST_FILTER_REGX} ]]; then
+            PASS_REGX=1
+        fi
+        if [[ -z "${PASS_GLOB}${PASS_REGX}" ]]; then
+            echo "[  SKIP  ] ${TEST_NAME}"
+            ((_BASHTEST_NUM_SKIP+=1))
+            return
+        fi
     fi
     echo "[  TEST  ] ${TEST_NAME}"
     _BASHTEST_HAS_ERROR=0
@@ -203,8 +251,11 @@ _bashtest_contains_element () {
 # The test's main function that finds and runs all tests.
 
 function test_runner() {
-    if [[ -n "${_BASHTEST_FILTER}" ]]; then
-        echo "Test filter: '${_BASHTEST_FILTER}'."
+    if [[ -n "${_BASHTEST_FILTER_GLOB}" ]]; then
+        echo "Test filter glob: '${_BASHTEST_FILTER_GLOB}'."
+    fi
+    if [[ -n "${_BASHTEST_FILTER_REGX}" ]]; then
+        echo "Test filter regx: '${_BASHTEST_FILTER_REGX}'."
     fi
     echo "----------"
     TEST_FUNCS=()
@@ -212,7 +263,7 @@ function test_runner() {
     if _bashtest_contains_element "test_init" "${TEST_FUNCS[@]}"; then
         if ! "test::test_init"; then
             _BASHTEST_INIT_FAILED=1
-            _BASHTEST_FILTER=("${TEST_FUNCS[*]}")
+            _BASHTEST_FILTER_GLOB=("${TEST_FUNCS[*]}")
             echo "Test init (test::test_init) failed! Skipping all tests."
         fi
         echo "----------"
