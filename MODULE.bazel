@@ -18,7 +18,7 @@
 # Due to flag and test references to the repo name we use the old name for now.
 module(
     name = "helly25_bashtest",
-    version = "0.1.1",
+    version = "0.2.0",
     repo_name = "com_helly25_bashtest",
 )
 
