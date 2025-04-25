@@ -16,7 +16,7 @@ The flags can be used on the `bazel run` and `bazel test` commands (the latter r
 
 ### Functionality
 
-* status helper `test_has_erro`: Returns whether a test function has had an error.
+* status helper `test_has_error`: Returns whether a test function has had an expectation error. This is reset for every test function.
 * status helper `test_has_failed_tests`: Returns whether a test program had previous failing test functions.
 * expectation `expect_eq` "\${LHS}" "\${RHS}": Asserts that two strings are the same.
 * expectation `expect_ne` "\${LHS}" "\${RHS}": Asserts that two strings are different.
