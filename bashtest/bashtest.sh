@@ -233,7 +233,7 @@ function _bashtest_handler() {
     fi
 }
 
-# Returns whether a test function has had an error.
+# Returns whether a test function has had an expectation error. This is reset for every test function.
 test_has_error() {
     [[ "${_BASHTEST_HAS_ERROR}" != "0" ]]
 }
