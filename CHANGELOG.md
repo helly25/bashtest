@@ -1,6 +1,7 @@
 # 0.3.0
 
-* Upgrade dependencies: bazel 9.1.1, bazel_skylib 1.8.2, platforms 1.0.0, rules_shell 0.6.1.
+* Added explicit load of `sh_library` (needed for bazel 9).
+* Upgraded dependencies: bazel 9.1.1, bazel_skylib 1.8.2, platforms 1.0.0, rules_shell 0.6.1.
 
 # 0.2.0
 
