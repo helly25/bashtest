@@ -18,10 +18,10 @@
 # Due to flag and test references to the repo name we use the old name for now.
 module(
     name = "helly25_bashtest",
-    version = "0.2.1",
+    version = "0.3.0",
     repo_name = "com_helly25_bashtest",
 )
 
-bazel_dep(name = "bazel_skylib", version = "1.7.1")
-bazel_dep(name = "platforms", version = "0.0.11")
-bazel_dep(name = "rules_shell", version = "0.4.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
