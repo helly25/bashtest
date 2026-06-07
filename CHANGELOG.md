@@ -1,4 +1,6 @@
-# 0.2.1
+# 0.3.0
+
+* Upgrade dependencies: bazel 9.1.1, bazel_skylib 1.8.2, platforms 1.0.0, rules_shell 0.6.1.
 
 # 0.2.0
 
