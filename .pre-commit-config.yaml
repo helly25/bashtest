@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: check-added-large-files
   - id: check-merge-conflict
@@ -17,7 +17,7 @@ repos:
           )
 
 - repo: https://github.com/rhysd/actionlint
-  rev: v1.7.7
+  rev: v1.7.12
   hooks:
   - id: actionlint
     name: Lint GitHub Actions workflow files
@@ -85,18 +85,18 @@ repos:
 
 
 - repo: https://github.com/keith/pre-commit-buildifier
-  rev: 8.0.1
+  rev: 8.5.1.1
   hooks:
   - id: buildifier
   - id: buildifier-lint
     args: ["--warnings=all"]
 
 - repo: https://github.com/lovesegfault/beautysh
-  rev: v6.2.1
+  rev: v6.4.3
   hooks:
   - id: beautysh
 
-- repo: https://github.com/koalaman/shellcheck-precommit
-  rev: v0.10.0
+- repo: https://github.com/shellcheck-py/shellcheck-py
+  rev: v0.11.0.1
   hooks:
   - id: shellcheck
