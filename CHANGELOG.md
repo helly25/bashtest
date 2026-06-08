@@ -1,3 +1,5 @@
+# 0.3.1
+
 # 0.3.0
 
 * Added explicit load of `sh_library` (needed for bazel 9).
