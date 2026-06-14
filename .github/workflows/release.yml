@@ -17,6 +17,10 @@ jobs:
   # publish-to-bcr GitHub App). See .github/workflows/publish.yaml.
   publish:
     needs: release
+    # Grant what publish.yaml's job requests; a called workflow cannot exceed
+    # the caller's permissions.
+    permissions:
+      contents: write
     uses: ./.github/workflows/publish.yaml
     with:
       tag_name: ${{ github.ref_name }}
