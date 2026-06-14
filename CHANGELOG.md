@@ -1,3 +1,7 @@
+# 0.3.2
+
+* Extended the BCR presubmit support matrix: added Bazel 9.x and the Linux platforms ubuntu 22.04, Debian 12, and Rocky Linux 8 (alongside the existing ubuntu 24.04 and macOS).
+
 # 0.3.1
 
 # 0.3.0
