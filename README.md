@@ -49,7 +49,7 @@ test_runner
 2) Write or extend a BUILD file
 
 ```bzl
-load("@com_helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
+load("@helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
 
 bashtest(
     name = "sh_test",
@@ -59,23 +59,9 @@ bashtest(
 
 ## Installation and requirements
 
-This repository bash to work (Linux, MacOs).
+This repository requires bash to work (Linux, MacOs).
 
-### WORKSPACE
-
-Checkout [Releases](https://github.com/helly25/bashtest/releases) or use head ref as follows:
-
-```
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-  name = "com_helly25_bashtest",
-  url = "https://github.com/helly25/bashtest/archive/refs/heads/main.tar.gz",
-  # See https://github.com/helly25/bashtest/releases for releases.
-)
-```
-
-### MODULES.bazel
+### MODULE.bazel
 
 Check [Releases](https://github.com/helly25/bashtest/releases) for details. All that is needed is a `bazel_dep` instruction with the correct version.
 

@@ -20,27 +20,35 @@
 
 set -euo pipefail
 
+function die() {
+    echo "ERROR: ${*}" 1>&2
+    exit 1
+}
+
 # Custom args to update as needed.
 PACKAGE_NAME="bashtest"
 BAZELMOD_NAME="helly25_bashtest"
-WORKSPACE_NAME="com_helly25_bashtest"
 PATCHES=()
 
 # Automatic vars from workflow integration.
 TAG="${GITHUB_REF_NAME}"
+VERSION="${TAG#v}" # Strip leading 'v' if present.
 
-function die() { echo "ERROR: ${*}" 1>&2 ; exit 1; }
+if [[ "${TAG}" == "v${VERSION}" ]]; then
+    die "Tag '${TAG}' has leading 'v'."
+fi
 
 # Computed vars.
-PREFIX="${PACKAGE_NAME}-${TAG}"
-ARCHIVE="${PACKAGE_NAME}-${TAG}.tar.gz"
-BAZELMOD_VERSION="$(sed -rne 's,.*version = "([0-9]+([.][0-9]+)+.*)".*,\1,p' < MODULE.bazel|head -n1)"
-CHANGELOG_VERSION="$(sed -rne 's,^# ([0-9]+([.][0-9]+)+.*)$,\1,p' < CHANGELOG.md|head -n1)"
+PREFIX="${PACKAGE_NAME}-${TAG}"         # Internal archive root directory folder: bashtest-0.4.0
+ARCHIVE="${PACKAGE_NAME}-${TAG}.tar.gz" # Target asset name on GitHub: bashtest-0.4.0.tar.gz
 
-if [ "${BAZELMOD_VERSION}" != "${TAG}" ]; then
+BAZELMOD_VERSION="$(sed -rne 's,.*version = "([0-9]+([.][0-9]+)+.*)".*,\1,p' <MODULE.bazel | head -n1)"
+CHANGELOG_VERSION="$(sed -rne 's,^# ([0-9]+([.][0-9]+)+.*)$,\1,p' <CHANGELOG.md | head -n1)"
+
+if [[ "${BAZELMOD_VERSION}" != "${VERSION}" ]]; then
     die "Tag = '${TAG}' does not match version = '${BAZELMOD_VERSION}' in MODULE.bazel."
 fi
-if [ "${CHANGELOG_VERSION}" != "${TAG}" ]; then
+if [[ "${CHANGELOG_VERSION}" != "${VERSION}" ]]; then
     die "Tag = '${TAG}' does not match version = '${CHANGELOG_VERSION}' in CHANGELOG.md."
 fi
 
@@ -52,10 +60,10 @@ fi
     cat tools/header.txt
     echo ""
     echo "\"\"\"Empty root BUILD for @${BAZELMOD_NAME}.\"\"\""
-} > BUILD.bazel
+} >BUILD.bazel
 
 # Apply patches
-for patch in "${PATCHES[@]}"; do
+for patch in ${PATCHES[@]+"${PATCHES[@]}"}; do
     patch -s -p 1 <"${patch}"
 done
 
@@ -74,52 +82,32 @@ EXCLUDES=(
             echo "${exclude}/** export-ignore"
         fi
     done
-} >> .gitattributes
+} >>.gitattributes
 
-# Build the archive
-git archive --format=tar.gz --prefix="${PREFIX}/" "${TAG}" -o "${ARCHIVE}" --add-virtual-file="${PREFIX}/VERSION:${TAG}" --worktree-attributes
-
-SHA256="$(shasum -a 256 "${ARCHIVE}" | awk '{print $1}')"
+# Build the archive from the patched/generated worktree, not the committed
+# "${TAG}" tree: `git archive "${TAG}"` reads the commit and would silently drop
+# the edits above (any patches, the generated BUILD.bazel). Stage the worktree
+# into a THROWAWAY index so the real index/checkout is never touched (nothing to
+# undo afterwards), and archive that tree. export-ignore still applies via the
+# staged .gitattributes (+ --worktree-attributes).
+TMP_INDEX="$(mktemp -u)"
+GIT_INDEX_FILE="${TMP_INDEX}" git read-tree HEAD
+GIT_INDEX_FILE="${TMP_INDEX}" git add --all
+ARCHIVE_TREE="$(GIT_INDEX_FILE="${TMP_INDEX}" git write-tree)"
+rm -f "${TMP_INDEX}"
+git archive --format=tar.gz --prefix="${PREFIX}/" -o "${ARCHIVE}" --add-virtual-file="${PREFIX}/VERSION:${VERSION}" --worktree-attributes "${ARCHIVE_TREE}"
 
 # Print header
-echo "# Version ${TAG}"
+echo "# Version ${VERSION}"
 echo "## [Changelog](https://github.com/helly25/${PACKAGE_NAME}/blob/${TAG}/CHANGELOG.md)"
 
 # Print Changelog
-awk '/^#/{f+=1;if(f>1)exit} !/^#/{print}' < CHANGELOG.md
+awk '/^#/{f+=1;if(f>1)exit} !/^#/{print}' <CHANGELOG.md
 
-cat << EOF
-## For Bazel MODULES.bazel
+cat <<EOF
+## For Bazel MODULE.bazel
 
-\`\`\`bzl
-bazel_dep(name = "${BAZELMOD_NAME}", version = "${TAG}")
 \`\`\`
-
-## For Bazel WORKSPACE
-
-\`\`\`bzl
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-  name = "${WORKSPACE_NAME}",
-  url = "https://github.com/helly25/${PACKAGE_NAME}/releases/download/${TAG}/${ARCHIVE}",
-  sha256 = "${SHA256}",
-  strip_prefix = "${PREFIX}",
-)
-\`\`\`
-
-### Initializing the required modules
-
-The project depends on some additional external repositories that can be added
-manually of by calling the support functions in the user' WORKSPACE file:
-
-\`\`\`bzl
-load("@com_helly25_bashtest//bzl/workspace:load_modules.bzl", "helly25_bashtest_load_modules")
-
-helly25_bashtest_load_modules()
-
-load("@com_helly25_bashtest//bzl/workspace:init_modules.bzl", "helly25_bashtest_init_modules")
-
-helly25_bashtest_init_modules()
+bazel_dep(name = "${BAZELMOD_NAME}", version = "${VERSION}")
 \`\`\`
 EOF

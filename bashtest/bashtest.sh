@@ -103,7 +103,7 @@ test_runner
 In your BUILD file:
 
 ```bzl
-load ("@com_helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
+load ("@helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
 
 bashtest(
     name = "my_test",

@@ -17,6 +17,13 @@
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
+# Resolve the bashtest runtime relative to *this* module's repository. A `Label`
+# constructed in a `.bzl` file is resolved against the repo that defines the
+# file, so the macro works no matter what apparent repo name a consumer assigns
+# it (and under both bzlmod and the legacy WORKSPACE setup). This is what lets
+# the module be named `helly25_bashtest` without a `com_helly25_bashtest` alias.
+_BASHTEST_SH = Label("//bashtest:bashtest_sh")
+
 def bashtest(
         name,
         deps = [],
@@ -49,7 +56,7 @@ def bashtest(
     * File: BUILD
 
     ```bzl
-    load("@com_helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
+    load("@helly25_bashtest//bashtest:bashtest.bzl", "bashtest")
 
     bashtest(
         name = "sh_test",
@@ -64,17 +71,12 @@ def bashtest(
         **kwargs:  All other attributes are passed through as is.
     """
 
-    # The module name is either 'helly25_bashtest' or 'com_helly25_bashtest'.
-    # However, its workspace name is 'com_helly25_bashtest' and in Bazelmod mode we
-    # use that as the repo_name, so it works in both cases.
     extra_env = {
-        "helly25_bashtest": (
-            "$(rootpath @com_helly25_bashtest//bashtest:bashtest_sh)"
-        ),
+        "helly25_bashtest": "$(rootpath {label})".format(label = _BASHTEST_SH),
     }
     sh_test(
         name = name,
-        deps = deps + ["@com_helly25_bashtest//bashtest:bashtest_sh"],
+        deps = deps + [_BASHTEST_SH],
         env = env | extra_env,
         **kwargs
     )

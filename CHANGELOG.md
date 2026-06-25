@@ -1,8 +1,12 @@
-# 0.3.2
+# 0.4.0
 
+* Renamed the module repo to `helly25_bashtest` and dropped the `com_helly25_bashtest` alias. The `bashtest` macro now resolves its runtime via a repo-relative `Label`, so it works regardless of the apparent repo name. Consumers must update `load("@helly25_bashtest//bashtest:bashtest.bzl", "bashtest")` (previously `@com_helly25_bashtest`).
+* Dropped legacy `WORKSPACE` support; the module is now bzlmod-only.
 * Extended the BCR presubmit support matrix: added Bazel 9.x and the Linux platforms ubuntu 22.04, Debian 12, and Rocky Linux 8 (alongside the existing ubuntu 24.04 and macOS).
 
 # 0.3.1
+
+* Re-release of 0.3.0 (no functional changes).
 
 # 0.3.0
 
