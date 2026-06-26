@@ -1,3 +1,5 @@
+# 0.4.1
+
 # 0.4.0
 
 * Renamed the module repo to `helly25_bashtest` and dropped the `com_helly25_bashtest` alias. The `bashtest` macro now resolves its runtime via a repo-relative `Label`, so it works regardless of the apparent repo name. Consumers must update `load("@helly25_bashtest//bashtest:bashtest.bzl", "bashtest")` (previously `@com_helly25_bashtest`).
