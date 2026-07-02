@@ -23,6 +23,12 @@ The flags can be used on the `bazel run` and `bazel test` commands (the latter r
 * expectation `expect_files_eq` "\${LHS}" "\${RHS}": Asserts that two file are the same (supports golden updates).
 * expectation `expect_contains` "\${EXPECTED}" "\${ARRAY[@]}": Assert that one string is present in an array.
 * expectation `expect_not_contains` "\${EXPECTED}" "\${ARRAY[@]}": Assert that one string is not present in an array.
+* expectation `expect_output_contains` "\${SUBSTRING}" "\${TEXT}": Assert that a text contains a literal substring.
+* expectation `expect_output_not_contains` "\${SUBSTRING}" "\${TEXT}": Assert that a text does not contain a literal substring.
+* expectation `expect_matches` "\${REGEX}" "\${TEXT}": Assert that a text matches an extended regular expression (bash built-in; `^`/`$` anchor the whole text).
+* expectation `expect_not_matches` "\${REGEX}" "\${TEXT}": Assert that a text does not match an extended regular expression.
+* expectation `expect_pcre_matches` "\${REGEX}" "\${TEXT}": Assert that a text matches a Perl Compatible Regular Expression (requires an external PCRE tool: `grep -P`, `pcre2grep`, or `pcregrep`).
+* expectation `expect_pcre_not_matches` "\${REGEX}" "\${TEXT}": Assert that a text does not match a Perl Compatible Regular Expression.
 * special test function `test::test_init`: If present, then this function runs first! Tests will only be executed if it succeeds.
 * special test function `test::test_done`: If present, then this function runs last!
 
@@ -56,6 +62,21 @@ bashtest(
     srcs = ["sh_test.sh"],
 )
 ```
+
+### Matching command output
+
+To assert on captured command output, prefer the built-in matchers
+(`expect_output_contains`, `expect_matches`, `expect_pcre_matches`) over
+hand-rolled pipelines.
+
+> [!WARNING]
+> bashtest runs under `set -o pipefail` (and recommends the same for your test
+> scripts). The common idiom `printf '%s' "${output}" | grep -qE '...'` is a
+> footgun there: `grep -q` exits on the first match, the producing command gets
+> `SIGPIPE`, and `pipefail` turns that into a non-zero exit — a flaky failure on
+> large output. Feed the text via a here-string (`grep -qE -- '...' <<<"${output}"`)
+> or, better, use `expect_matches`, which relies on bash's built-in `[[ =~ ]]`
+> and spawns no subprocess at all.
 
 ## Installation and requirements
 

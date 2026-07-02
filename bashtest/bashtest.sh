@@ -70,6 +70,28 @@ Note: If long test flags are denoted with '-'s, then '_' can also be used, e.g.
 * expect_not_contains "${EXPECTED}" "${ARRAY[@]}"
                             Assert that one string is NOT present in an array.
 
+* expect_output_contains "${SUBSTRING}" "${TEXT}"
+                            Assert that a text contains a literal substring.
+
+* expect_output_not_contains "${SUBSTRING}" "${TEXT}"
+                            Assert that a text does NOT contain a substring.
+
+* expect_matches "${REGEX}" "${TEXT}"
+                            Assert that a text matches an extended regular
+                            expression (ERE). Uses bash built-in matching, so
+                            ^ and $ anchor the whole text, not each line.
+
+* expect_not_matches "${REGEX}" "${TEXT}"
+                            Assert that a text does NOT match an ERE.
+
+* expect_pcre_matches "${REGEX}" "${TEXT}"
+                            Assert that a text matches a Perl Compatible Regular
+                            Expression. Requires an external PCRE tool
+                            (grep -P, pcre2grep, or pcregrep).
+
+* expect_pcre_not_matches "${REGEX}" "${TEXT}"
+                            Assert that a text does NOT match a PCRE.
+
 
 ## Status:
 
@@ -561,4 +583,285 @@ expect_not_contains() {
         echo >&2 "  Array:    '${*}'"
         return 1
     fi
+}
+
+# Truncates a value for display in test output (mirrors expect_eq).
+_bashtest_ellipsize() {
+    local value="${1}"
+    if [[ "${#value}" -ge 50 ]]; then
+        value="${value:0:47}..."
+    fi
+    echo "${value}"
+}
+
+################################################################################
+# Assert that a text matches an extended regular expression (ERE).
+#
+# ```sh
+# expect_matches <regex> <text>
+# ```
+#
+# Matching uses bash's built-in `[[ "${text}" =~ ${regex} ]]`. No subprocess is
+# spawned, so - unlike the `printf ... | grep -qE ...` idiom - this can never
+# trigger SIGPIPE under `set -o pipefail` (which bashtest and its test scripts
+# enable).
+#
+# NOTE: `${text}` is matched as a single string, so `^` and `$` anchor the whole
+# text, NOT individual lines (this differs from `grep`, which matches per line).
+# Unanchored patterns behave the same as with `grep`.
+
+expect_matches() {
+    REGEX="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    # NOTE: `${REGEX}` must stay unquoted so bash treats it as a pattern.
+    if [[ "${TEXT}" =~ ${REGEX} ]]; then
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text matches regex: '${REGEX}'."
+        fi
+        return 0
+    else
+        _BASHTEST_HAS_ERROR=1
+        echo >&2 ""
+        echo >&2 "Test failure:"
+        echo >&2 "  Expected: text matches regex:"
+        echo >&2 "  Regex:   '${REGEX}'"
+        echo >&2 "  Text:    '${TEXT_OUT}'"
+        return 1
+    fi
+}
+
+################################################################################
+# Assert that a text does NOT match an extended regular expression (ERE).
+#
+# ```sh
+# expect_not_matches <regex> <text>
+# ```
+#
+# See `expect_matches` for the matching semantics (whole-text anchoring).
+
+expect_not_matches() {
+    REGEX="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    # NOTE: `${REGEX}` must stay unquoted so bash treats it as a pattern.
+    if [[ "${TEXT}" =~ ${REGEX} ]]; then
+        _BASHTEST_HAS_ERROR=1
+        echo >&2 ""
+        echo >&2 "Test failure:"
+        echo >&2 "  Expected: text does NOT match regex:"
+        echo >&2 "  Regex:   '${REGEX}'"
+        echo >&2 "  Text:    '${TEXT_OUT}'"
+        return 1
+    else
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text does NOT match regex: '${REGEX}'."
+        fi
+        return 0
+    fi
+}
+
+################################################################################
+# Assert that a text contains a literal substring.
+#
+# ```sh
+# expect_output_contains <substring> <text>
+# ```
+#
+# The substring is matched literally (glob metacharacters are not special). Like
+# the regex matchers this spawns no subprocess and is SIGPIPE-safe.
+
+expect_output_contains() {
+    SUBSTR="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    if [[ "${TEXT}" == *"${SUBSTR}"* ]]; then
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text contains substring: '${SUBSTR}'."
+        fi
+        return 0
+    else
+        _BASHTEST_HAS_ERROR=1
+        echo >&2 ""
+        echo >&2 "Test failure:"
+        echo >&2 "  Expected: text contains substring:"
+        echo >&2 "  Substring: '${SUBSTR}'"
+        echo >&2 "  Text:      '${TEXT_OUT}'"
+        return 1
+    fi
+}
+
+################################################################################
+# Assert that a text does NOT contain a literal substring.
+#
+# ```sh
+# expect_output_not_contains <substring> <text>
+# ```
+#
+# The substring is matched literally (glob metacharacters are not special).
+
+expect_output_not_contains() {
+    SUBSTR="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    if [[ "${TEXT}" == *"${SUBSTR}"* ]]; then
+        _BASHTEST_HAS_ERROR=1
+        echo >&2 ""
+        echo >&2 "Test failure:"
+        echo >&2 "  Expected: text does NOT contain substring:"
+        echo >&2 "  Substring: '${SUBSTR}'"
+        echo >&2 "  Text:      '${TEXT_OUT}'"
+        return 1
+    else
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text does NOT contain substring: '${SUBSTR}'."
+        fi
+        return 0
+    fi
+}
+
+################################################################################
+# PCRE matching support.
+#
+# Unlike `expect_matches`, PCRE (Perl Compatible Regular Expressions) is not a
+# bash built-in, so the PCRE matchers shell out to an external tool. Detection
+# order: `grep -P` (GNU grep), `ggrep -P` (GNU grep on macOS via Homebrew),
+# `pcre2grep`, then `pcregrep`. The result is cached in `_BASHTEST_PCRE_CMD`.
+# If no PCRE tool is available (e.g. a stock macOS install, whose BSD `grep` has
+# no `-P`), the PCRE matchers fail with an actionable message rather than
+# silently passing.
+
+_BASHTEST_PCRE_CMD=
+_BASHTEST_PCRE_CMD_SET=0
+
+# Echoes the detected PCRE command (possibly with a flag, e.g. "grep -P"), or
+# an empty string if none is available. The detection is performed only once.
+_bashtest_pcre_cmd() {
+    if [[ "${_BASHTEST_PCRE_CMD_SET}" == "1" ]]; then
+        echo "${_BASHTEST_PCRE_CMD}"
+        return 0
+    fi
+    _BASHTEST_PCRE_CMD_SET=1
+    local candidate
+    for candidate in "grep -P" "ggrep -P" "pcre2grep" "pcregrep"; do
+        # shellcheck disable=SC2086 # Intentional split: candidate may hold a flag.
+        if ${candidate} -q -e "x" <<<"x" >/dev/null 2>&1; then
+            _BASHTEST_PCRE_CMD="${candidate}"
+            break
+        fi
+    done
+    echo "${_BASHTEST_PCRE_CMD}"
+    return 0
+}
+
+# Runs the detected PCRE tool against a text via a here-string (no pipe, so it
+# cannot SIGPIPE under `set -o pipefail`). Return codes mirror grep plus one:
+#   0 = match, 1 = no match, 2 = tool/regex error, 3 = no PCRE tool available.
+_bashtest_pcre_match() {
+    local regex="${1}" text="${2}" cmd rc
+    cmd="$(_bashtest_pcre_cmd)"
+    if [[ -z "${cmd}" ]]; then
+        return 3
+    fi
+    # shellcheck disable=SC2086 # Intentional split: cmd may hold a flag.
+    if ${cmd} -q -e "${regex}" <<<"${text}"; then rc=0; else rc="${?}"; fi
+    return "${rc}"
+}
+
+################################################################################
+# Assert that a text matches a Perl Compatible Regular Expression (PCRE).
+#
+# ```sh
+# expect_pcre_matches <regex> <text>
+# ```
+#
+# Requires an external PCRE tool (see the "PCRE matching support" section). Like
+# `expect_matches`, `${text}` is matched as a single string, so `^`/`$` anchor
+# the whole text unless the pattern opts into multiline mode (e.g. `(?m)`).
+
+expect_pcre_matches() {
+    REGEX="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    local rc
+    if _bashtest_pcre_match "${REGEX}" "${TEXT}"; then rc=0; else rc="${?}"; fi
+    if [[ "${rc}" == "0" ]]; then
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text matches PCRE regex: '${REGEX}'."
+        fi
+        return 0
+    fi
+    _BASHTEST_HAS_ERROR=1
+    echo >&2 ""
+    echo >&2 "Test failure:"
+    if [[ "${rc}" == "3" ]]; then
+        echo >&2 "  Expected: text matches PCRE regex, but no PCRE tool is available."
+        echo >&2 "  Install GNU grep (grep -P), pcre2grep, or pcregrep."
+    else
+        echo >&2 "  Expected: text matches PCRE regex:"
+    fi
+    echo >&2 "  Regex:   '${REGEX}'"
+    echo >&2 "  Text:    '${TEXT_OUT}'"
+    return 1
+}
+
+################################################################################
+# Assert that a text does NOT match a Perl Compatible Regular Expression (PCRE).
+#
+# ```sh
+# expect_pcre_not_matches <regex> <text>
+# ```
+#
+# Requires an external PCRE tool (see the "PCRE matching support" section).
+
+expect_pcre_not_matches() {
+    REGEX="${1}"
+    TEXT="${2}"
+    shift
+    shift
+    TEXT_OUT="$(_bashtest_ellipsize "${TEXT}")"
+    local rc
+    if _bashtest_pcre_match "${REGEX}" "${TEXT}"; then rc=0; else rc="${?}"; fi
+    if [[ "${rc}" == "1" ]]; then
+        if [[ -n "${_BASHTEST_VERBOSE}" ]]; then
+            echo ""
+            echo "Test success:"
+            echo "  Expected: text does NOT match PCRE regex: '${REGEX}'."
+        fi
+        return 0
+    fi
+    _BASHTEST_HAS_ERROR=1
+    echo >&2 ""
+    echo >&2 "Test failure:"
+    if [[ "${rc}" == "3" ]]; then
+        echo >&2 "  Expected: text does NOT match PCRE regex, but no PCRE tool is available."
+        echo >&2 "  Install GNU grep (grep -P), pcre2grep, or pcregrep."
+    elif [[ "${rc}" == "0" ]]; then
+        echo >&2 "  Expected: text does NOT match PCRE regex, but it did:"
+    else
+        echo >&2 "  Expected: text does NOT match PCRE regex, but the tool errored:"
+    fi
+    echo >&2 "  Regex:   '${REGEX}'"
+    echo >&2 "  Text:    '${TEXT_OUT}'"
+    return 1
 }

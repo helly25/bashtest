@@ -1,4 +1,10 @@
-# 0.4.1
+# 0.5.0
+
+* Added text-matching assertions:
+  * `expect_output_contains` / `expect_output_not_contains`: literal substring checks.
+  * `expect_matches` / `expect_not_matches`: extended regular expression (ERE) checks via bash's built-in `[[ =~ ]]` (no subprocess, so SIGPIPE-safe under `set -o pipefail`). `^`/`$` anchor the whole text, not individual lines.
+  * `expect_pcre_matches` / `expect_pcre_not_matches`: Perl Compatible Regular Expression checks. These shell out to an external tool (`grep -P`, `ggrep -P`, `pcre2grep`, or `pcregrep`) via a here-string and fail with an actionable message when none is available.
+* Documented the `cmd | grep -q` SIGPIPE-under-pipefail pitfall in the README.
 
 # 0.4.0
 
