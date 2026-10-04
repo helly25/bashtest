@@ -39,6 +39,20 @@ be retried independently; its failure does not require recreating a release or m
 Release helpers, numeric tags, and version agreement keep their existing contracts. No module
 dependency versions change in this rollout.
 
+### Published-site budget
+
+Each publisher fetches only the latest `coverage-pages` snapshot with `--depth=1` and no tags.
+`storage-report.json` measures the complete retained tree before committing and the staged tree
+again after deployment-only artwork. It records file counts and bytes by top-level directory,
+excluding Git metadata and the report itself. Release pages and assets are not changed.
+
+Publication warns at **250 MB**. An emergency **9 GB** payload guard leaves TAR packaging headroom;
+GitHub's [supported published-site limit](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)
+remains **1 GB**, so the emergency guard is not an operating target. Review growth before reaching
+that limit. This repository does not currently publish coverage, so no coverage retention or
+browser loader is introduced. Git history, build caches, and Actions artifacts are separate budgets.
+The change follows [mbo PR #549](https://github.com/mboworks/mbo/pull/549).
+
 ## Contributor rules and verification
 
 `AGENTS.md`, `GIT_RULES.md`, and `STYLE_SH.md` synchronize applicable shared rules. `RULES.md`
